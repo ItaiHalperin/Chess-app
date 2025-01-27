@@ -1,0 +1,6 @@
+# FastAPI is the web framework
+fastapi==0.109.1
+
+# Uvicorn is the ASGI server for running the FastAPI app
+uvicorn[standard]==0.22.0
+python-dotenv~=1.0.1

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .chess-board {
+                display: grid;
+                grid-template-columns: repeat(9, 1fr);
+                width: 63vmin;
+                height: 0;
+                padding-bottom: 63vmin;
+                margin: auto; /* Centers the chessboard horizontally */
+
+                top: -30%;
+                transform: translateY(30%);
+                z-index: 1;
+
+            }
+
+            .chess-board div {
+                display: flex; /* Enables Flexbox */
+                justify-content: center; /* Centers horizontally */
+                align-items: start;
+                width: 7vmin;
+                height: 0;
+                padding-bottom: 7vmin;
+                z-index: 1;
+
+
+            }
+            .chess-board .white {
+                border: 1px solid #999;
+                background: #fff;
+            }
+            .chess-board .black {
+                border: 1px solid #999;
+                background: #000;
+            }
+
+            .chess-board .rank {
+                font-size: 4vmin;
+            }
+
+            img {
+                height: 7vmin;
+                width: auto;
+            }
+
+
+            .modal-container {
+                background-color: rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content:center;
+                position: fixed;
+                top: 0px;
+                left: 0px;
+                right: 0px;
+                height: 100vh;
+                width: 100vw;
+                z-index: 5;
+
+
+            }
+            
+
+            /* Modal Content/Box */
+            .modal {
+                background-color: #fff;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                padding: 30px 50px;
+                width: 600px;
+                max-width: 100%;
+                text-align: center;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                right: 0px;
+                align-items: center;
+                font-size: large;
+                margin: auto;
+            }
+
+            .finalRankModal {
+                background-color: #fff;
+                border-radius: 5px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                padding: 30px 50px;
+                width: 7vmin;
+                max-width: 100%;
+                text-align: center;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                right: 0px;
+                align-items: center;
+                font-size: large;
+                margin: auto;
+            }
+
+
+            
+        #flipButton {
+            background-color: #808080; /* Grey background */
+            border: none; /* Remove borders */
+            color: white; /* White text */
+            padding: 15px 32px; /* Some padding */
+            text-align: center; /* Centered text */
+            text-decoration: none; /* Remove underline */
+            display: inline-block; /* Make the button inline */
+            font-size: 16px; /* Increase font size */
+            margin: 4px 2px; /* Some margin */
+            cursor: pointer; /* Pointer/hand icon */
+            border-radius: 12px; /* Rounded corners */
+            transition: background-color 0.3s; /* Smooth transition */
+            position: absolute;
+        }
+
+        #flipButton:hover {
+            background-color: #696969; /* Darker grey on hover */
+        }
+
+
+
+        </style>
+    </head>
+    
+    <body>
+
+        <div class="chess-board">
+            <script>
+                var boardDict;               
+                var origin = null;
+                const uri = 'ws://localhost:8000/ws';
+                const ws = new WebSocket(uri);
+                var whiteOrientation = true;
+
+                ws.onmessage = function(event) {
+                    const msg = JSON.parse(event.data)
+                    if(msg["type"] === "checkmate")
+                    {
+                        openModal();
+                    }
+                    else if(msg["type"] === "startup")
+                    {
+                        sendMessage(document.cookie);
+                    }
+                    else if(msg["type"] === "final_rank_pawn")
+                    {
+                        const destination = msg["destination"];
+                        const turn = msg["turn"]
+                        finalRankDialogue(destination, turn);
+                    }
+
+                    else if(msg["type"] === "cookie_update")
+                    {
+                        boardDict = msg["board"];
+                        document.cookie = JSON.stringify(boardDict);
+                    }
+                    else if(msg["type"]==="new_board")
+                    {
+                            boardDict = msg["board"];
+                            setTimeout(function() {createChessBoard(boardDict);}, 400);
+                    }
+                    else
+                    {
+                        boardDict = msg["board"];
+                        createChessBoard(boardDict);
+                    }
+
+                }
+
+                function sendMessage(event) {
+                        ws.send(event)
+                }
+                function createCheckmateWindow()
+                {
+                    var window = document.createElement('div');
+                    window.className = "modal";
+                    var windowContent = document.createElement('div');
+                    windowContent.className = "modal-content";
+                    windowContent.innerHTML += "Checkmate!";
+                    windowContent.innerHTML += "The game is over.";
+                    var existingBoard = document.querySelector('.chess-board');
+                    if (existingBoard) {
+                        existingBoard.remove();
+                    }
+                    window.appendChild(windowContent);
+                    document.body.appendChildWindow;
+
+
+                }
+
+                function createChessBoard(dictionary) {
+                    var existingBoard = document.querySelector('.chess-board');
+                    if (existingBoard) {
+                        existingBoard.remove();
+                    }
+
+                    var board = document.createElement('div');
+                    board.className = 'chess-board';
+                    var firstRow = 0;
+                    var lastRow = 7;
+                    var firstCol = 8;
+                    var lastCol = 0;
+                    var dir = 1;
+                    if(whiteOrientation)
+                    {
+                        firstRow = 7;
+                        lastRow = 0;
+                        firstCol = 0;
+                        dir = -1;
+                    }
+                    for (let i = firstRow; i < 8 && i >= 0; i += dir) {
+                        for (let j = firstCol; j < 9 && j >= 0; j -= dir) {
+                            if (j === firstCol) {
+                                let cell = document.createElement('div');
+                                cell.className = 'rank';
+                                cell.innerHTML += 1 + i;
+                                board.appendChild(cell);
+                            } else {
+                                let row = i;
+                                let col = j - 1;
+                                if (!whiteOrientation)
+                                    col = j;
+                                let curPiece = dictionary?.[row.toString() + ', ' + col.toString()];
+                                let cell = document.createElement('div');
+                                cell.className = (i + j) % 2 === 0 ? 'white' : 'black';
+
+                                let position_dict;
+                                position_dict = {"row": row, "col": col}
+                                cell.setAttribute('position', JSON.stringify(position_dict));
+
+
+                                cell.onclick = function () {
+                                    let cell = this;
+                                    cell.style.background = 'red';
+                                    if (origin !== null) {
+                                        setTimeout(function () {
+                                            let message = JSON.stringify({"origin": origin, "destination": JSON.parse(cell.getAttribute('position'))})
+                                            sendMessage(message);
+                                            origin = null;
+                                        }, 350);
+                                    } else {
+                                        origin = JSON.parse(cell.getAttribute('position'));
+                                    }
+                                };
+
+                                if (curPiece !== undefined) {
+                                    var pieceImg = document.createElement('img');
+                                    pieceImg.src = 'static/' + curPiece['piece'] + '.png';
+                                    pieceImg.className = curPiece['piece'].substring(1);
+                                    cell.appendChild(pieceImg);
+                                }
+                                board.appendChild(cell);
+                            }
+                        }
+                    }
+                    let cell = document.createElement('div');
+                    cell.className = 'rank';
+                    board.appendChild(cell);
+                    for(let i = lastRow; i < 8 && i >= 0; i -= dir) {
+                        cell = document.createElement('div');
+                        cell.className = 'rank';
+                        cell.innerHTML += String.fromCharCode(65 + i);
+                        board.appendChild(cell);
+                    }
+                    // Append the chess board to your document, you can choose where
+                    document.body.appendChild(board); // This appends it to the body, change as needed
+                }  
+
+                var button = document.createElement("button");
+                button.id = "flipButton";
+                button.innerHTML = "Flip";
+                button.addEventListener("click", function() {
+                    whiteOrientation = !whiteOrientation;
+                    createChessBoard(boardDict);
+                });          
+                document.body.appendChild(button);    
+
+
+
+
+            </script>
+        </div>
+
+        <div id="finalRankModalContainer" class="modal-container">
+
+            <div id="finalRankModalContent" class="finalRankModal">
+
+                
+                <script>
+                    const finalRankModalContainer = document.getElementById('finalRankModalContainer');
+                    const finalRankModalContent = document.getElementById('finalRankModalContent');
+                    closeFinalRankModal();
+
+                                    // Function to open the modal
+
+
+                    function finalRankDialogue(position, turn)
+                    {   
+                        finalRankModalContent.innerHTML = "";
+                        const elements = document.getElementsByTagName('div');
+                        
+                        for (const element of elements) {
+                            if (element.getAttribute('position') && element.getAttribute('position').nodeValue === position) {
+                                const square = element;
+                            }
+                        }
+                        let direction = -1;
+                        let color = 'W';
+
+                        if(turn === "0")
+                        {
+                            direction = 1;
+                            color = 'B'
+                        }
+                        var queen = document.createElement('form');
+                        var queenImg = document.createElement('img');
+                        queenImg.src = "static/" + color + "queen.png";
+                        queen.appendChild(queenImg);
+                        finalRankModalContent.appendChild(queen);
+                        queen.onclick = function() {
+                            closeFinalRankModal();
+                            sendMessage("queen");
+                        }
+
+                        var knight = document.createElement('form');
+                        var knightImg = document.createElement('img');
+                        knightImg.src = "static/" + color + "knight.png";
+                        knight.appendChild(knightImg);
+                        finalRankModalContent.appendChild(knight);
+                        knight.onclick = function() {
+                            closeFinalRankModal();
+                            sendMessage("knight");
+                        }
+
+                        var bishop = document.createElement('form');
+                        var bishopImg = document.createElement('img');
+                        bishopImg.src = "static/" + color + "bishop.png";
+                        bishop.appendChild(bishopImg);
+                        finalRankModalContent.appendChild(bishop);
+                        bishop.onclick = function() {
+                            closeFinalRankModal();
+                            sendMessage("bihsop");
+                        }
+
+                        var rook = document.createElement('form');
+                        var rookImg = document.createElement('img');
+                        rookImg.src = "static/" + color + "rook.png";
+                        rook.appendChild(rookImg);
+                        finalRankModalContent.appendChild(rook);
+                        rook.onclick = function() {
+                            sendMessage("rook");
+                            closeFinalRankModal();
+                        }
+
+                        
+
+                        openFinalRankModal();
+
+
+                    }
+
+                    function openFinalRankModal() {
+                        finalRankModalContainer.style.display = 'block';
+                        finalRankModalContent.style.display = 'block';
+                    }
+
+                    // Function to close the modal
+                    function closeFinalRankModal() {
+                        finalRankModalContainer.style.display = 'none';
+                        finalRankModalContent.style.display = 'none';
+                    }
+                </script>
+            </div>
+        </div>
+
+        <div id="checkmateModalContainer" class="modal-container">
+
+            <div id="checkmateModalContent" class="modal">
+                <p>Checkmate!
+                    Press restart to play again.
+                <p>
+
+                <script>
+                    const modalWrapper = document.getElementById('checkmateModalContainer');
+                    const modalContent = document.getElementById('checkmateModalContent');
+                    closeModal();
+                                    // Function to open the modal
+
+                    var restartButton = document.createElement('form');
+                    restartButton.textContent = 'Restart';
+                    restartButton.onclick = function() {
+                        sendMessage('restart'); 
+                        closeModal();
+                    };
+                    modalContent.appendChild(restartButton);
+            
+                    function openModal() {
+                        modalWrapper.style.display = 'block';
+                        modalContent.style.display = 'block';
+                    }
+
+                    // Function to close the modal
+                    function closeModal() {
+                        modalWrapper.style.display = 'none';
+                        modalContent.style.display = 'none';
+                    }
+                </script>
+            </div>
+        </div>
+
+    </body>
+</html>
