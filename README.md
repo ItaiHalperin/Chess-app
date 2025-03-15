@@ -1,2 +1,2 @@
 DISCLAIMER: This project is old, and poorly written. 
-This bothered me, so I'm working on an improved version, which you can see on my GitHub page!
+This bothered me, and I've learned a ton from a phone recommendation project I built (on my GitHub page), so I'm working on an improved version, which you can see on my GitHub page!
